@@ -173,3 +173,56 @@ while True:
                 cv2.putText(frame, text, (x, y - 5),
                     cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
                 # count specific objects
+                if "{}".format(LABELS[classIDs[i]]) == "person":
+                  persons+=1
+                if "{}".format(LABELS[classIDs[i]]) == "car":
+                  cars+=1
+                if "{}".format(LABELS[classIDs[i]]) == "truck":
+                  trucks+=1
+                if "{}".format(LABELS[classIDs[i]]) == "bus":
+                  busses+=1
+    # construct a tuple of information we will be displaying on the frame
+    info = [
+        ("Busses", busses),
+        ("Trucks", trucks),
+        ("Cars", cars),
+        ("Persons", persons),   
+    ]
+    # loop over the info tuples and draw them on our frame
+    for (i, (k, v)) in enumerate(info):
+        text = "{}: {}".format(k, v)
+        cv2.putText(frame, text, (10, H - ((i * 30) + 30)),
+            cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 2)
+
+    # check if video output directory is given
+    if args["output"] is not None:
+        # check if the video writer is None
+        if writer is None:
+          # initialize our video writer
+          fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+          writer = cv2.VideoWriter(args["output"], fourcc, 30,
+              (frame.shape[1], frame.shape[0]), True)
+        #write the output frame to disk
+        writer.write(frame)
+
+    # check if data output directory is given
+    if args["data"] is not None:
+        # write number of detections to array
+        obj[frame_ind][0] = int(frame_ind+1)
+        obj[frame_ind][1] = len(idxs)
+        obj[frame_ind][2] = int(persons)
+        obj[frame_ind][3] = int(cars)
+        obj[frame_ind][4] = int(trucks)
+        obj[frame_ind][5] = int(busses)
+        obj[frame_ind][6] = int(framedatetime)
+        # save obj as csv every 10 frames
+        if frame_ind % 10 == 0:
+          obj_df = pd.DataFrame(obj)
+          obj_df.columns = ['Frame', 'Objects', 'Persons', 'Cars', 'Trucks', 'Busses', 'DateTime']
+          obj_df.to_csv(args["data"])
+
+    # print object detection info 
+    print("frame: {:.0f}".format(int(frame_ind+1)), "   datetime:", str(framedatetime))
+    print("             persons: {:.0f}".format(int(persons)))
+    print("                cars: {:.0f}".format(int(cars)))
+    print("              trucks: {:.0f}".format(int(trucks)))
