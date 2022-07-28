@@ -114,3 +114,62 @@ while True:
 
     # loop over each of the layer outputs
     for output in layerOutputs:
+        # loop over each of the detections
+        for detection in output:
+            # extract the class ID and confidence (i.e., probability)
+            # of the current object detection
+            scores = detection[5:]
+            classID = np.argmax(scores)
+            confidence = scores[classID]
+
+            # filter out weak predictions by ensuring the detected
+            # probability is greater than the minimum probability
+            if confidence > args["confidence"]:
+                # scale the bounding box coordinates back relative to
+                # the size of the image, keeping in mind that YOLO
+                # actually returns the center (x, y)-coordinates of
+                # the bounding box followed by the boxes' width and
+                # height
+                box = detection[0:4] * np.array([W, H, W, H])
+                (centerX, centerY, width, height) = box.astype("int")
+
+                # use the center (x, y)-coordinates to derive the top
+                # and and left corner of the bounding box
+                x = int(centerX - (width / 2))
+                y = int(centerY - (height / 2))
+
+                # update our list of bounding box coordinates,
+                # confidences, and class IDs
+                boxes.append([x, y, int(width), int(height)])
+                confidences.append(float(confidence))
+                classIDs.append(classID)
+
+    # apply non-maxima suppression to suppress weak, overlapping
+    # bounding boxes
+    idxs = cv2.dnn.NMSBoxes(boxes, confidences, args["confidence"],
+        args["threshold"])
+
+    #set initial objects to 0
+    persons = 0
+    cars = 0
+    trucks = 0
+    busses = 0
+    # ensure at least one detection exists
+    if len(idxs) > 0:
+
+        # loop over the indexes we are keeping
+        for i in idxs.flatten():
+            # extract the bounding box coordinates
+            (x, y) = (boxes[i][0], boxes[i][1])
+            (w, h) = (boxes[i][2], boxes[i][3])
+
+            # check for specific objects
+            if ("{}".format(LABELS[classIDs[i]]) == "person") or ("{}".format(LABELS[classIDs[i]]) == "car") or ("{}".format(LABELS[classIDs[i]]) == "truck") or ("{}".format(LABELS[classIDs[i]]) == "bus"):
+                # draw a bounding box rectangle and label on the frame
+                color = [int(c) for c in COLORS[classIDs[i]]]
+                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+                text = "{}: {:.4f}".format(LABELS[classIDs[i]],
+                    confidences[i])
+                cv2.putText(frame, text, (x, y - 5),
+                    cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
+                # count specific objects
