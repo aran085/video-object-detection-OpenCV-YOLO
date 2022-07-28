@@ -55,3 +55,62 @@ COLORS = np.random.randint(0, 255, size=(len(LABELS), 3),
     dtype="uint8")
 
 # derive the paths to the YOLO weights and model configuration
+weightsPath = os.path.sep.join([args["yolo"], "yolov3.weights"])
+configPath = os.path.sep.join([args["yolo"], "yolov3.cfg"])
+
+# load our YOLO object detector trained on COCO dataset (80 classes)
+# and determine only the *output* layer names that we need from YOLO
+print("Initializing...")
+net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
+ln = net.getLayerNames()
+ln = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+
+url = args["url"]
+
+vPafy = pafy.new(url)
+play = vPafy.getbest(preftype="webm")
+streams = streamlink.streams(url)
+
+# set initial parameters
+writer = None
+(W, H) = (None, None)
+starttime=time.time()
+frame_ind = 0
+obj = np.zeros((1000,7))
+# loop over frames from the video file stream
+while True:
+    # read the next frame from the file
+    framedatetime = datetime.datetime.now()
+    framedatetime = framedatetime.strftime('%Y%m%d%H%M%S')
+    cap = cv2.VideoCapture(streams["best"].url)
+    (grabbed,frame) = cap.read()
+    #(grabbed, frame) = vs.read()
+
+    # if the frame was not grabbed, then we have reached the end
+    # of the stream
+    if not grabbed:
+        break
+
+    # if the frame dimensions are empty, grab them
+    if W is None or H is None:
+        (H, W) = frame.shape[:2]
+
+
+    # construct a blob from the input frame and then perform a forward
+    # pass of the YOLO object detector, giving us our bounding boxes
+    # and associated probabilities
+    blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (416, 416),
+        swapRB=True, crop=False)
+    net.setInput(blob)
+    start = time.time()
+    layerOutputs = net.forward(ln)
+    end = time.time()
+
+    # initialize our lists of detected bounding boxes, confidences,
+    # and class IDs, respectively
+    boxes = []
+    confidences = []
+    classIDs = []
+
+    # loop over each of the layer outputs
+    for output in layerOutputs:
