@@ -17,3 +17,65 @@ import cv2
 import os
 import pafy
 import streamlink
+
+# construct the argument parse and parse the arguments
+ap = argparse.ArgumentParser()
+ap.add_argument("-u", "--url", required=True,
+    help="video url")
+ap.add_argument("-p", "--period", type=float, default=5,
+    help="execution period")
+ap.add_argument("-o", "--output", required=False,
+    help="path to output video")
+ap.add_argument("-d", "--data", required=False,
+    help="path to output csv")
+ap.add_argument("-y", "--yolo", required=True,
+    help="base path to yolov weights, cfg and coco directory")
+ap.add_argument("-c", "--confidence", type=float, default=0.4,
+    help="minimum probability to filter weak detections")
+ap.add_argument("-t", "--threshold", type=float, default=0.55,
+    help="threshold when applyong non-maxima suppression")
+args = vars(ap.parse_args())
+
+# set execution period 
+period = args["period"]
+
+# load the COCO class labels our YOLO model was trained on
+labelsPath = os.path.sep.join([args["yolo"], "coco.names"])
+LABELS = open(labelsPath).read().strip().split("\n")
+
+# initialize a list of colors to represent each possible class label
+np.random.seed(42)
+COLORS = np.random.randint(0, 255, size=(len(LABELS), 3),
+    dtype="uint8")
+
+# derive the paths to the YOLO weights and model configuration
+weightsPath = os.path.sep.join([args["yolo"], "yolov3.weights"])
+configPath = os.path.sep.join([args["yolo"], "yolov3.cfg"])
+
+# load our YOLO object detector trained on COCO dataset (80 classes)
+# and determine only the *output* layer names that we need from YOLO
+print("Initializing...")
+net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
+ln = net.getLayerNames()
+ln = [ln[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+
+url = args["url"]
+
+vPafy = pafy.new(url)
+play = vPafy.getbest(preftype="webm")
+streams = streamlink.streams(url)
+
+# set initial parameters
+writer = None
+(W, H) = (None, None)
+starttime=time.time()
+frame_ind = 0
+obj = np.zeros((1000,7))
+# loop over frames from the video file stream
+while True:
+    # read the next frame from the file
+    framedatetime = datetime.datetime.now()
+    framedatetime = framedatetime.strftime('%Y%m%d%H%M%S')
+    cap = cv2.VideoCapture(streams["best"].url)
+    (grabbed,frame) = cap.read()
+    #(grabbed, frame) = vs.read()
