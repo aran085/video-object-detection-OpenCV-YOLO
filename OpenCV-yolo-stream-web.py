@@ -226,3 +226,35 @@ while True:
     print("             persons: {:.0f}".format(int(persons)))
     print("                cars: {:.0f}".format(int(cars)))
     print("              trucks: {:.0f}".format(int(trucks)))
+    print("              busses: {:.0f}".format(int(busses)))
+    
+
+    # wait, if period is not over jet
+    time.sleep(period - ((time.time() - starttime) % period))
+    # show the output frame
+    # cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
+    frameR = cv2.resize(frame, (960, 540))
+    #cv2.imshow("Frame", frameR)
+    
+    #stream to port
+    streamer.update_frame(frameR)
+    if not streamer.is_streaming:
+        streamer.start_streaming()
+    cv2.waitKey(30)
+
+    frame_ind += 1
+
+    key = cv2.waitKey(1) & 0xFF
+    # if the `q` key was pressed, break from the loop
+    if key == ord("q"):
+        break
+
+# check if data output directory is given
+if args["data"] is not None:
+    #save obj as csv 
+    obj_df = pd.DataFrame(obj)
+    obj_df.columns = ['Frame', 'Objects', 'Persons', 'Cars', 'Trucks', 'Busses', 'DateTime']
+    obj_df.to_csv(args["data"]) 
+
+cv2.destroyAllWindows()
+
