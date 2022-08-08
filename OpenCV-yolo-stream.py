@@ -207,3 +207,41 @@ while True:
         obj[frame_ind][2] = int(persons)
         obj[frame_ind][3] = int(cars)
         obj[frame_ind][4] = int(trucks)
+        obj[frame_ind][5] = int(busses)
+        obj[frame_ind][6] = int(framedatetime)
+        # save obj as csv every 10 frames
+        if frame_ind % 10 == 0:
+          obj_df = pd.DataFrame(obj)
+          obj_df.columns = ['Frame', 'Objects', 'Persons', 'Cars', 'Trucks', 'Busses', 'DateTime']
+          obj_df.to_csv(args["data"])
+
+    # print object detection info 
+    print("frame: {:.0f}".format(int(frame_ind+1)), "   datetime:", str(framedatetime))
+    print("             persons: {:.0f}".format(int(persons)))
+    print("                cars: {:.0f}".format(int(cars)))
+    print("              trucks: {:.0f}".format(int(trucks)))
+    print("              busses: {:.0f}".format(int(busses)))
+
+    # wait, if period is not over jet
+    time.sleep(period - ((time.time() - starttime) % period))
+    # show the output frame
+    # cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
+    frameR = cv2.resize(frame, (960, 540))
+    cv2.imshow("Frame", frameR)
+
+    frame_ind += 1
+
+    key = cv2.waitKey(1) & 0xFF
+    # if the `q` key was pressed, break from the loop
+    if key == ord("q"):
+        break
+
+# check if data output directory is given
+if args["data"] is not None:
+    #save obj as csv 
+    obj_df = pd.DataFrame(obj)
+    obj_df.columns = ['Frame', 'Objects', 'Persons', 'Cars', 'Trucks', 'Busses', 'DateTime']
+    obj_df.to_csv(args["data"]) 
+
+cv2.destroyAllWindows()
+
