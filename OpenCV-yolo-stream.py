@@ -148,3 +148,62 @@ while True:
     cars = 0
     trucks = 0
     busses = 0
+    # ensure at least one detection exists
+    if len(idxs) > 0:
+
+        # loop over the indexes we are keeping
+        for i in idxs.flatten():
+            # extract the bounding box coordinates
+            (x, y) = (boxes[i][0], boxes[i][1])
+            (w, h) = (boxes[i][2], boxes[i][3])
+
+            # check for specific objects
+            if ("{}".format(LABELS[classIDs[i]]) == "person") or ("{}".format(LABELS[classIDs[i]]) == "car") or ("{}".format(LABELS[classIDs[i]]) == "truck") or ("{}".format(LABELS[classIDs[i]]) == "bus"):
+                # draw a bounding box rectangle and label on the frame
+                color = [int(c) for c in COLORS[classIDs[i]]]
+                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+                text = "{}: {:.4f}".format(LABELS[classIDs[i]],
+                    confidences[i])
+                cv2.putText(frame, text, (x, y - 5),
+                    cv2.FONT_HERSHEY_COMPLEX, 0.5, color, 1)
+                # count specific objects
+                if "{}".format(LABELS[classIDs[i]]) == "person":
+                  persons+=1
+                if "{}".format(LABELS[classIDs[i]]) == "car":
+                  cars+=1
+                if "{}".format(LABELS[classIDs[i]]) == "truck":
+                  trucks+=1
+                if "{}".format(LABELS[classIDs[i]]) == "bus":
+                  busses+=1
+    # construct a tuple of information we will be displaying on the frame
+    info = [
+        ("Busses", busses),
+        ("Trucks", trucks),
+        ("Cars", cars),
+        ("Persons", persons),   
+    ]
+    # loop over the info tuples and draw them on our frame
+    for (i, (k, v)) in enumerate(info):
+        text = "{}: {}".format(k, v)
+        cv2.putText(frame, text, (10, H - ((i * 30) + 30)),
+            cv2.FONT_HERSHEY_COMPLEX, 0.8, (255, 255, 255), 2)
+
+    # check if video output directory is given
+    if args["output"] is not None:
+        # check if the video writer is None
+        if writer is None:
+          # initialize our video writer
+          fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+          writer = cv2.VideoWriter(args["output"], fourcc, 30,
+              (frame.shape[1], frame.shape[0]), True)
+        #write the output frame to disk
+        writer.write(frame)
+
+    # check if data output directory is given
+    if args["data"] is not None:
+        # write number of detections to array
+        obj[frame_ind][0] = int(frame_ind+1)
+        obj[frame_ind][1] = len(idxs)
+        obj[frame_ind][2] = int(persons)
+        obj[frame_ind][3] = int(cars)
+        obj[frame_ind][4] = int(trucks)
